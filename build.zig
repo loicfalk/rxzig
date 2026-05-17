@@ -9,7 +9,7 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-    const rx_zig_module = b.addModule("rx_zig", .{
+    const rx_zig_module = b.addModule("rx", .{
         .root_source_file = b.path("src/lib.zig"),
         .target = target,
         .optimize = optimize,
@@ -21,9 +21,45 @@ pub fn build(b: *std.Build) void {
         .root_module = rx_zig_module,
         .linkage = .static,
     });
+
     rx_zig_lib.root_module.addImport("xev", libxev_dep.module("xev"));
     b.installArtifact(rx_zig_lib);
 
+    // ============================================================
+    // TEST
+    // ============================================================
+    const test_step = b.step("test", "Run unit tests");
+
+    const test_files = [_][]const u8{
+        "test/observable_test.zig",
+        "test/observable_test.zig",
+    };
+
+    // Run inline tests from the library module itself.
+    const lib_tests = b.addTest(.{
+        .root_module = rx_zig_module,
+    });
+    const run_lib_tests = b.addRunArtifact(lib_tests);
+    test_step.dependOn(&run_lib_tests.step);
+
+    for (test_files) |path| {
+        const t = b.addTest(.{
+            .root_module = b.createModule(.{
+                .root_source_file = b.path(path),
+                .target = target,
+                .optimize = optimize,
+                .imports = &.{
+                    .{ .name = "rx", .module = rx_zig_module },
+                },
+            }),
+        });
+        const run = b.addRunArtifact(t);
+        test_step.dependOn(&run.step);
+    }
+
+    // ============================================================
+    // EXAMPLES
+    // ============================================================
     const examples = [_]struct { name: []const u8, file: []const u8 }{
         .{ .name = "basic", .file = "examples/basic/main.zig" },
     };
