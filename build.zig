@@ -33,6 +33,7 @@ pub fn build(b: *std.Build) void {
     const test_files = [_][]const u8{
         "test/observable_test.zig",
         "test/observable_test.zig",
+        "test/publish_subject_test.zig",
     };
 
     // Run inline tests from the library module itself.
